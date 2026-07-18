@@ -10,7 +10,7 @@ export const LONG_LEVEL = [
   '#.#########',
   '#C........#',
   '#########.#',
-  '#.........#',
+  '####......#',
   '####E######',
 ];
 
@@ -37,13 +37,92 @@ export const MID_LEVEL = [
   '#.....E##',
 ];
 
-/** In play order: a short warm-up, a medium mixed-turn run, the full corridor. */
-export const LEVELS = [SHORT_LEVEL, MID_LEVEL, LONG_LEVEL];
-
 export interface Vec2 {
   x: number;
   y: number;
 }
+
+function mulberry32(seed: number): () => number {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function randInt(rng: () => number, min: number, max: number): number {
+  return min + Math.floor(rng() * (max - min + 1));
+}
+
+/**
+ * Deterministically generates a single-width winding corridor for a given
+ * seed and turn count. Legs alternate horizontal/vertical starting
+ * horizontal (so the player's fixed East starting facing always matches the
+ * corridor); vertical legs always move south and are at least 2 cells long.
+ * Those two rules alone guarantee the walk can never touch itself: every
+ * horizontal leg ends up on a row no other leg will ever use again, so no
+ * collision search or retry logic is needed the way a general self-avoiding
+ * random walk would require.
+ */
+function generateLevel(seed: number, turnCount: number): string[] {
+  const rng = mulberry32(seed);
+  const legCount = turnCount + 1;
+  const path: Vec2[] = [{ x: 0, y: 0 }];
+
+  let x = 0;
+  let y = 0;
+  for (let leg = 0; leg < legCount; leg++) {
+    if (leg % 2 === 0) {
+      const length = randInt(rng, 2, 6);
+      const sign = leg === 0 ? 1 : rng() < 0.5 ? 1 : -1;
+      for (let i = 0; i < length; i++) {
+        x += sign;
+        path.push({ x, y });
+      }
+    } else {
+      const length = randInt(rng, 2, 5); // >= 2, so consecutive horizontal legs never land on adjacent rows
+      for (let i = 0; i < length; i++) {
+        y += 1; // always south: rows only ever increase, so no leg can revisit or touch an earlier row
+        path.push({ x, y });
+      }
+    }
+  }
+
+  const xs = path.map((p) => p.x);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const maxY = path[path.length - 1].y;
+  const offsetX = 1 - minX; // leave a 1-cell wall border on the left
+  const width = maxX - minX + 3; // + left/right border
+  const height = maxY + 3; // + top/bottom border
+
+  const grid: string[][] = Array.from({ length: height }, () => Array(width).fill('#'));
+  for (const p of path) {
+    grid[p.y + 1][p.x + offsetX] = '.';
+  }
+
+  const start = path[0];
+  const end = path[path.length - 1];
+  const checkpoint = path[Math.max(1, Math.min(path.length - 2, Math.floor(path.length / 2)))];
+  grid[start.y + 1][start.x + offsetX] = 'S';
+  grid[end.y + 1][end.x + offsetX] = 'E';
+  grid[checkpoint.y + 1][checkpoint.x + offsetX] = 'C';
+
+  return grid.map((row) => row.join(''));
+}
+
+// 57 procedurally generated levels, ramping from 5 turns up to 22 across the
+// set, so the full progression (3 hand-built + 57 generated) reaches 60
+// levels without hand-authoring each one.
+const GENERATED_LEVELS: string[][] = Array.from({ length: 57 }, (_, g) => {
+  const turnCount = Math.min(22, 5 + Math.floor(g / 3));
+  return generateLevel(4000 + g, turnCount);
+});
+
+/** In play order: three hand-built levels, then 57 generated ones of rising difficulty — 60 total. */
+export const LEVELS: string[][] = [SHORT_LEVEL, MID_LEVEL, LONG_LEVEL, ...GENERATED_LEVELS];
 
 export class LevelMap {
   readonly width: number;
