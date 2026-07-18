@@ -1,5 +1,6 @@
 import './style.css';
 import { Game } from './game';
+import { LEVELS } from './map';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <canvas id="silhouette"></canvas>
@@ -13,7 +14,8 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <p>
       Kulaklık tak. Ekrana dokun: bir tık sesi ve yankısı geri döner.
       Sürükle: yukarı/aşağı ilerle, sağa/sola dön. Yönünü kaybetmeden
-      koridorun sonuna ulaş. Üç bölüm var, her biri bir öncekinden uzun.
+      koridorun sonuna ulaş. ${LEVELS.length} bölüm var, her biri bir
+      öncekinden zorlaşıyor.
     </p>
     <button class="start-btn" id="start-btn">Başla</button>
   </div>
