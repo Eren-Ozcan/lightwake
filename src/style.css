@@ -91,6 +91,36 @@ body {
   letter-spacing: 0.3px;
 }
 
+/* order pushes the secondary action below the primary one regardless of DOM order */
+.start-btn.secondary {
+  order: 1;
+  margin-top: 0;
+  padding: 10px 22px;
+  border-color: rgba(79, 184, 232, 0.35);
+  background: transparent;
+  color: rgba(232, 244, 255, 0.6);
+  font-size: 13px;
+}
+
+#hint {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, 82vw);
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.55;
+  color: rgba(232, 244, 255, 0.7);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+#hint.visible {
+  opacity: 1;
+}
+
 #complete {
   position: absolute;
   inset: 0;
