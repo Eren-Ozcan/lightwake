@@ -26,6 +26,10 @@ Orijinal fikir: [`game-ideas` reposundaki `18-yanki.tr.md`](https://github.com/E
 - **60 bölüm:** 3'ü elle tasarlanmış (Kısa/Orta/Uzun), 57'si deterministik
   olarak üretilmiş (sabit seed, her oynayışta aynı). Zorluk 5 ile 22 dönüş
   arasında kademeli artıyor.
+- **Eğitim bölümü:** ilk açılışta önerilen, adım adım ipuçlarıyla ilerleyen
+  mini bir öğretici koridor (dokun/dinle → ilerle → duvara çarp → dön →
+  checkpoint → çıkış). Tamamlanınca hatırlanıyor (localStorage), başlangıç
+  ekranından tekrar oynanabiliyor. Ana 60 bölümün dışında, sayıya dahil değil.
 - **Doğrulama:** `npm run verify-levels` — her bölümün tek bağlantılı yol
   olduğunu (dallanma/bitişik koridor yok), checkpoint ve bitişin
   başlangıçtan erişilebilir olduğunu kontrol ediyor. Bu betik, elle
