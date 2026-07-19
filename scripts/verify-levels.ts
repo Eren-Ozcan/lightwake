@@ -1,9 +1,13 @@
-import { LEVELS, LevelMap, FACINGS } from '../src/map';
+import { LEVELS, TUTORIAL_LEVEL, LevelMap, FACINGS } from '../src/map';
 
 let failures = 0;
 
-LEVELS.forEach((rows, i) => {
-  const label = `Level ${i + 1}`;
+const ALL_LEVELS = [
+  { label: 'Tutorial', rows: TUTORIAL_LEVEL },
+  ...LEVELS.map((rows, i) => ({ label: `Level ${i + 1}`, rows })),
+];
+
+ALL_LEVELS.forEach(({ label, rows }) => {
 
   const width = rows[0].length;
   if (!rows.every((r) => r.length === width)) {
@@ -83,5 +87,5 @@ LEVELS.forEach((rows, i) => {
   }
 });
 
-console.log(failures === 0 ? `All ${LEVELS.length} levels valid.` : `${failures} problem(s) found across ${LEVELS.length} levels.`);
+console.log(failures === 0 ? `All ${ALL_LEVELS.length} levels valid (incl. tutorial).` : `${failures} problem(s) found across ${ALL_LEVELS.length} levels.`);
 process.exit(failures === 0 ? 0 : 1);
