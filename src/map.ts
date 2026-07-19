@@ -1,5 +1,18 @@
 export type Cell = '#' | '.' | 'S' | 'C' | 'E';
 
+// Minimal teaching corridor, one leg per mechanic: a straight run to learn
+// tap/echo and forward movement (ending in a guaranteed wall bump at the
+// corner), a right turn, the checkpoint right after it, then a left turn into
+// a short final leg. Played before level 1, driven by src/tutorial.ts. Not
+// part of LEVELS — it precedes the progression instead of counting toward it.
+export const TUTORIAL_LEVEL = [
+  '########',
+  '#S...###',
+  '####.###',
+  '####C.E#',
+  '########',
+];
+
 // A single winding corridor, one cell wide. Six turns to stress-test whether
 // a player can still tell where they are facing after a run of blind turns.
 export const LONG_LEVEL = [
