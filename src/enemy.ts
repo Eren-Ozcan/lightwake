@@ -45,8 +45,8 @@ export class Enemy {
     return false;
   }
 
-  /** Gap behind the player, in corridor cells — drives audio/haptic intensity while chasing. */
+  /** Gap behind the player, in corridor cells — drives audio/haptic intensity while chasing. Always >= 0: tick() keeps pathIndex clamped to at most playerPathIndex. */
   distanceTo(playerPathIndex: number): number {
-    return Math.max(0, playerPathIndex - this.pathIndex);
+    return playerPathIndex - this.pathIndex;
   }
 }
