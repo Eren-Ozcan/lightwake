@@ -143,7 +143,10 @@ export class LevelMap {
   readonly start: Vec2;
   readonly checkpoint: Vec2;
   readonly end: Vec2;
+  /** Start-to-end cell order. Valid because every level is a single simple path (enforced by verify-levels.ts). */
+  readonly corridorPath: Vec2[];
   private readonly rows: Cell[][];
+  private readonly pathIndexByCell: Map<string, number>;
 
   constructor(rows: string[] = LONG_LEVEL) {
     this.rows = rows.map((row) => row.split('') as Cell[]);
@@ -167,6 +170,9 @@ export class LevelMap {
     this.start = start;
     this.checkpoint = checkpoint;
     this.end = end;
+
+    this.corridorPath = this.walkCorridor();
+    this.pathIndexByCell = new Map(this.corridorPath.map((p, i) => [`${p.x},${p.y}`, i]));
   }
 
   isWall(x: number, y: number): boolean {
@@ -176,6 +182,31 @@ export class LevelMap {
 
   cellAt(x: number, y: number): Cell {
     return this.rows[y][x];
+  }
+
+  /** Distance of a cell along the corridor, in cells from start. Used to gauge how far the chasing enemy is behind the player. */
+  pathIndexOf(p: Vec2): number {
+    return this.pathIndexByCell.get(`${p.x},${p.y}`) ?? 0;
+  }
+
+  private walkCorridor(): Vec2[] {
+    const path: Vec2[] = [this.start];
+    let prev: Vec2 | null = null;
+    let current = this.start;
+    while (current.x !== this.end.x || current.y !== this.end.y) {
+      const neighbors = [
+        { x: current.x + 1, y: current.y },
+        { x: current.x - 1, y: current.y },
+        { x: current.x, y: current.y + 1 },
+        { x: current.x, y: current.y - 1 },
+      ];
+      const next = neighbors.find((n) => !this.isWall(n.x, n.y) && !(prev && n.x === prev.x && n.y === prev.y));
+      if (!next) break; // unreachable on a level that passes verify-levels
+      path.push(next);
+      prev = current;
+      current = next;
+    }
+    return path;
   }
 }
 
