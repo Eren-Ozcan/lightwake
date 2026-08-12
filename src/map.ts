@@ -137,6 +137,16 @@ const GENERATED_LEVELS: string[][] = Array.from({ length: 57 }, (_, g) => {
 /** In play order: three hand-built levels, then 57 generated ones of rising difficulty — 60 total. */
 export const LEVELS: string[][] = [SHORT_LEVEL, MID_LEVEL, LONG_LEVEL, ...GENERATED_LEVELS];
 
+/** The open (non-wall) orthogonal neighbors of a cell. Shared by LevelMap's own corridor walk and scripts/verify-levels.ts so the two don't drift apart on how a "neighbor" is defined. */
+export function openNeighbors(map: LevelMap, p: Vec2): Vec2[] {
+  return [
+    { x: p.x + 1, y: p.y },
+    { x: p.x - 1, y: p.y },
+    { x: p.x, y: p.y + 1 },
+    { x: p.x, y: p.y - 1 },
+  ].filter((n) => !map.isWall(n.x, n.y));
+}
+
 export class LevelMap {
   readonly width: number;
   readonly height: number;
@@ -189,19 +199,28 @@ export class LevelMap {
     return this.pathIndexByCell.get(`${p.x},${p.y}`) ?? 0;
   }
 
+  /**
+   * Walks the corridor from start to end. A visited set (rather than just
+   * excluding the immediate previous cell) guarantees this terminates even
+   * if a level ever violates the single-simple-path invariant that
+   * verify-levels checks separately — a malformed level fails loudly here
+   * at construction time instead of hanging the tab or silently truncating
+   * the path (which would make pathIndexOf fall back to 0 for the missing
+   * cells and misreport the player as back at the start).
+   */
   private walkCorridor(): Vec2[] {
     const path: Vec2[] = [this.start];
+    const visited = new Set([`${this.start.x},${this.start.y}`]);
     let prev: Vec2 | null = null;
     let current = this.start;
     while (current.x !== this.end.x || current.y !== this.end.y) {
-      const neighbors = [
-        { x: current.x + 1, y: current.y },
-        { x: current.x - 1, y: current.y },
-        { x: current.x, y: current.y + 1 },
-        { x: current.x, y: current.y - 1 },
-      ];
-      const next = neighbors.find((n) => !this.isWall(n.x, n.y) && !(prev && n.x === prev.x && n.y === prev.y));
-      if (!next) break; // unreachable on a level that passes verify-levels
+      const next = openNeighbors(this, current).find(
+        (n) => !(prev && n.x === prev.x && n.y === prev.y) && !visited.has(`${n.x},${n.y}`),
+      );
+      if (!next) {
+        throw new Error('Level corridor is broken: no single path from start to end');
+      }
+      visited.add(`${next.x},${next.y}`);
       path.push(next);
       prev = current;
       current = next;

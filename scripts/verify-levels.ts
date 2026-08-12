@@ -1,4 +1,4 @@
-import { LEVELS, TUTORIAL_LEVEL, LevelMap, FACINGS } from '../src/map';
+import { LEVELS, TUTORIAL_LEVEL, LevelMap, FACINGS, openNeighbors } from '../src/map';
 
 let failures = 0;
 
@@ -36,14 +36,9 @@ ALL_LEVELS.forEach(({ label, rows }) => {
   }
 
   for (const c of floorCells) {
-    const openNeighbors = [
-      [c.x + 1, c.y],
-      [c.x - 1, c.y],
-      [c.x, c.y + 1],
-      [c.x, c.y - 1],
-    ].filter(([nx, ny]) => !map.isWall(nx, ny)).length;
-    if (openNeighbors > 2) {
-      console.error(`${label}: branching/touching corridor at (${c.x},${c.y}) — ${openNeighbors} open neighbors`);
+    const count = openNeighbors(map, c).length;
+    if (count > 2) {
+      console.error(`${label}: branching/touching corridor at (${c.x},${c.y}) — ${count} open neighbors`);
       failures++;
     }
   }
@@ -55,14 +50,11 @@ ALL_LEVELS.forEach(({ label, rows }) => {
   const queue = [map.start];
   while (queue.length) {
     const cur = queue.shift()!;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = cur.x + dx;
-      const ny = cur.y + dy;
-      if (map.isWall(nx, ny)) continue;
-      const k = `${nx},${ny}`;
+    for (const n of openNeighbors(map, cur)) {
+      const k = key(n);
       if (visited.has(k)) continue;
       visited.add(k);
-      queue.push({ x: nx, y: ny });
+      queue.push(n);
     }
   }
   if (!visited.has(key(map.end))) {
