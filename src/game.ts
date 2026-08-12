@@ -40,10 +40,12 @@ export class Game {
   private enemy: Enemy | null = null;
   private lastFrameTime = 0;
   private pulseAccumulator = 0;
+  private rafId: number | null = null;
 
   constructor(dom: Dom) {
     this.dom = dom;
     this.loadLevel(LEVELS[this.levelIndex]);
+    document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
 
     new Controls(dom.overlay.parentElement as HTMLElement, {
       onTap: () => this.handleTap(),
@@ -72,19 +74,33 @@ export class Game {
   }
 
   private beginPlay(mode: 'game' | 'tutorial'): void {
+    if (this.started) return; // guards against a double-tap on the start button spawning a second tick() loop
     this.mode = mode;
     if (mode === 'tutorial') {
       this.loadLevel(TUTORIAL_LEVEL);
       this.tutorial = new Tutorial(this.dom.hint);
-    } else {
-      this.loadLevel(LEVELS[this.levelIndex]);
     }
+    // For 'game' mode, level 0 is already loaded by the constructor — no need to reload it here.
     this.started = true;
     this.audio.ensureStarted();
     this.dom.overlay.classList.add('hidden');
     this.haptics.tap();
     this.lastFrameTime = performance.now();
-    requestAnimationFrame((t) => this.tick(t));
+    this.rafId = requestAnimationFrame((t) => this.tick(t));
+  }
+
+  /** Pauses the tick loop while the tab is backgrounded, so a chasing enemy never drains battery unattended, and resumes cleanly on return. */
+  private handleVisibilityChange(): void {
+    if (!this.started) return;
+    if (document.hidden) {
+      if (this.rafId !== null) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+      }
+    } else if (this.rafId === null) {
+      this.lastFrameTime = performance.now();
+      this.rafId = requestAnimationFrame((t) => this.tick(t));
+    }
   }
 
   /** Drives the chasing enemy in real time, independent of tap/move input. */
@@ -94,7 +110,7 @@ export class Game {
     this.lastFrameTime = now;
 
     if (!this.ended) this.updateEnemy(dt);
-    requestAnimationFrame((t) => this.tick(t));
+    this.rafId = requestAnimationFrame((t) => this.tick(t));
   }
 
   private updateEnemy(dt: number): void {
