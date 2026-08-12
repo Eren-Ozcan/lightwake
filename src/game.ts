@@ -3,6 +3,11 @@ import { AudioEngine } from './audio';
 import { Haptics } from './haptics';
 import { Controls } from './controls';
 import { Tutorial, markTutorialDone } from './tutorial';
+import { Enemy } from './enemy';
+
+// The first two hand-built levels stay calm while the core mechanic is still
+// being learned; the chasing enemy shows up from the third level onward.
+const ENEMY_START_LEVEL = 2;
 
 interface Dom {
   overlay: HTMLElement;
@@ -32,6 +37,10 @@ export class Game {
   private ended = false;
   private started = false;
 
+  private enemy: Enemy | null = null;
+  private lastFrameTime = 0;
+  private pulseAccumulator = 0;
+
   constructor(dom: Dom) {
     this.dom = dom;
     this.loadLevel(LEVELS[this.levelIndex]);
@@ -58,6 +67,8 @@ export class Game {
     this.path = [{ ...this.player }];
     this.checkpointReached = false;
     this.ended = false;
+    this.enemy = this.mode === 'game' && this.levelIndex >= ENEMY_START_LEVEL ? new Enemy() : null;
+    this.pulseAccumulator = 0;
   }
 
   private beginPlay(mode: 'game' | 'tutorial'): void {
@@ -65,11 +76,57 @@ export class Game {
     if (mode === 'tutorial') {
       this.loadLevel(TUTORIAL_LEVEL);
       this.tutorial = new Tutorial(this.dom.hint);
+    } else {
+      this.loadLevel(LEVELS[this.levelIndex]);
     }
     this.started = true;
     this.audio.ensureStarted();
     this.dom.overlay.classList.add('hidden');
     this.haptics.tap();
+    this.lastFrameTime = performance.now();
+    requestAnimationFrame((t) => this.tick(t));
+  }
+
+  /** Drives the chasing enemy in real time, independent of tap/move input. */
+  private tick(now: number): void {
+    if (!this.started) return;
+    const dt = Math.min(0.1, (now - this.lastFrameTime) / 1000);
+    this.lastFrameTime = now;
+
+    if (!this.ended) this.updateEnemy(dt);
+    requestAnimationFrame((t) => this.tick(t));
+  }
+
+  private updateEnemy(dt: number): void {
+    if (!this.enemy) return;
+    const playerIndex = this.map.pathIndexOf(this.player);
+    const caught = this.enemy.tick(dt, playerIndex);
+    if (caught) {
+      this.handleCaught();
+      return;
+    }
+
+    if (this.enemy.state === 'chasing') {
+      const distance = this.enemy.distanceTo(playerIndex);
+      const closeness = Math.max(0, Math.min(1, 1 - distance / 10));
+      const pulseInterval = 1.0 - closeness * 0.65; // 1.0s far apart, down to 0.35s when it's nearly on top of the player
+      this.pulseAccumulator += dt;
+      if (this.pulseAccumulator >= pulseInterval) {
+        this.pulseAccumulator = 0;
+        this.audio.playEnemyPulse(closeness);
+        this.haptics.threat(closeness);
+      }
+    } else {
+      this.pulseAccumulator = 0;
+    }
+  }
+
+  /** Caught by the enemy: freeze input, play the stinger, then restart the current level from its start cell. */
+  private handleCaught(): void {
+    this.ended = true;
+    this.audio.playCaught();
+    this.haptics.caught();
+    setTimeout(() => this.loadLevel(LEVELS[this.levelIndex]), 700);
   }
 
   private handleTap(): void {
