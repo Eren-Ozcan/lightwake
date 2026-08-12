@@ -18,6 +18,7 @@ export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private reverbSend: GainNode | null = null;
+  private enemyNoiseBuffer: AudioBuffer | null = null;
 
   /** Must be called from a user gesture (tap) before any sound will play. */
   ensureStarted(): void {
@@ -140,16 +141,22 @@ export class AudioEngine {
     const now = ctx.currentTime;
     const c = Math.max(0, Math.min(1, closeness));
 
-    const duration = 0.35;
-    const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-      const t = i / data.length;
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2);
+    // Can fire repeatedly through a whole chase window, unlike the tap-gated
+    // click sounds, so the underlying noise buffer is built once and reused
+    // rather than regenerated on every call.
+    if (!this.enemyNoiseBuffer) {
+      const duration = 0.35;
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        const t = i / data.length;
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2);
+      }
+      this.enemyNoiseBuffer = buffer;
     }
 
     const source = ctx.createBufferSource();
-    source.buffer = buffer;
+    source.buffer = this.enemyNoiseBuffer;
 
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
