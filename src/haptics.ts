@@ -37,4 +37,18 @@ export class Haptics {
   complete(): void {
     this.vibrate([0, 20, 80, 20, 80, 20, 80, 40]);
   }
+
+  /** Chasing enemy: a soft pulse that sharpens as it closes in. Distinct rhythm from echoFeedback so it can't be mistaken for sonar. */
+  threat(closeness: number): void {
+    if (closeness > 0.7) {
+      this.vibrate([0, 12, 30, 12, 30, 12]);
+    } else {
+      this.vibrate(10);
+    }
+  }
+
+  /** Caught by the enemy — the level is about to restart. */
+  caught(): void {
+    this.vibrate([0, 40, 30, 60, 30, 90]);
+  }
 }

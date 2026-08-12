@@ -123,6 +123,69 @@ export class AudioEngine {
     this.playTone([392, 523.25, 659.25, 783.99], 0.16);
   }
 
+  /**
+   * Low growl for the chasing enemy — filtered noise, not the click's
+   * bandpass, so it reads as a different kind of sound and never gets
+   * confused with echo information. Deliberately unpanned/centered: the
+   * enemy trails the player along the corridor, not in a real screen-space
+   * direction, so panning it would either lie (if tied to a fake angle) or
+   * leak true position (undermining the front-hemisphere-only echo design).
+   * Centered reads as a felt/sensed presence — closer to telepathy than
+   * hearing — rather than a locatable sound. Closeness (0 far, 1 on top of
+   * the player) drives loudness and how present/textured it sounds.
+   */
+  playEnemyPulse(closeness: number): void {
+    if (!this.ctx || !this.master) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const c = Math.max(0, Math.min(1, closeness));
+
+    const duration = 0.35;
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / data.length;
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2);
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 220 + c * 260;
+    filter.Q.value = 4 + c * 6;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.1 + c * 0.35;
+
+    source.connect(filter).connect(gain).connect(this.master);
+    if (this.reverbSend) gain.connect(this.reverbSend);
+    source.start(now);
+  }
+
+  /** Harsh dissonant stinger for getting caught — deliberately unlike every other cue in the game. */
+  playCaught(): void {
+    if (!this.ctx || !this.master) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    for (const freq of [140, 151]) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.4, now + 0.4);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc.connect(gain).connect(this.master);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    }
+  }
+
   private playTone(freqs: number[], gap: number): void {
     if (!this.ctx || !this.master) return;
     const ctx = this.ctx;
