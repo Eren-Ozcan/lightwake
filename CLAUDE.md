@@ -1,4 +1,4 @@
-# Lightwake (YankıEkransız)
+# Lightwake
 
 ## Store / Marketing Assets
 
@@ -7,7 +7,7 @@ screenshots are **never committed to this public repo**. They are saved in two
 places:
 
 1. A local, gitignored copy: `docs/store-assets-originals/`.
-2. A private backup repo: `C:\Projects\pictures\YankıEkransız\` (the local
+2. A private backup repo: `C:\Projects\pictures\lightwake\` (the local
    clone of the private `Eren-Ozcan/pictures` repo) — assets are copied there
    and committed + pushed in that repo.
 
