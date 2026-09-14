@@ -2,6 +2,7 @@
   "name": "lightwake",
   "private": true,
   "version": "0.0.0",
+  "license": "UNLICENSED",
   "description": "Lightwake — an echolocation puzzle game played almost entirely in the dark.",
   "type": "module",
   "scripts": {
